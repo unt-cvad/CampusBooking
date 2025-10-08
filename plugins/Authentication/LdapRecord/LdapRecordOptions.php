@@ -34,7 +34,7 @@ class LdapRecordOptions
     {
         return $this->config['password'] ?? null;
     }
-    
+
     public function getPort()
     {
         return $this->config['port'] ?? 389;
@@ -59,9 +59,23 @@ class LdapRecordOptions
     {
         return $this->config['account.suffix'] ?? '';
     }
-    
+
     public function syncGroups()
     {
         return ($this->config['sync.groups'] ?? false) === true || ($this->config['sync.groups'] ?? 'false') === 'true';
+    }
+
+    public function getAttributeMapping()
+    {
+        $mapping = [];
+        $mapString = $this->config['attribute.mapping'] ?? '';
+        $pairs = explode(',', $mapString);
+        foreach ($pairs as $pair) {
+            $parts = explode('=', $pair);
+            if (count($parts) == 2) {
+                $mapping[trim($parts[0])] = trim($parts[1]);
+            }
+        }
+        return $mapping;
     }
 }

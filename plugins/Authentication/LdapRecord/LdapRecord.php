@@ -2,7 +2,7 @@
 
 use LdapRecord\Connection;
 use LdapRecord\Container;
-use LdapRecord\Models\ActiveDirectory\User as LdapUser;
+use LdapRecord\Models\ActiveDirectory\User as LdapUserModel;
 
 require_once(ROOT_DIR . 'plugins/Authentication/LdapRecord/namespace.php');
 
@@ -18,7 +18,7 @@ class LdapRecord extends Authentication implements IAuthentication
         $this->authToDecorate = $authentication;
         $this->options = new LdapRecordOptions();
 
-        $connectionOptions = [
+        $connection = new Connection([
             'hosts' => $this->options->getHosts(),
             'base_dn' => $this->options->getBaseDn(),
             'username' => $this->options->getAdminUsername(),
@@ -26,10 +26,9 @@ class LdapRecord extends Authentication implements IAuthentication
             'port' => $this->options->getPort(),
             'use_ssl' => $this->options->isSsl(),
             'use_tls' => $this->options->isTls(),
-        ];
+        ]);
         
-        $connection = new Connection($connectionOptions);
-        Container::addConnection($connection);
+        Container::addConnection($connection, 'default');
     }
 
     public function Validate($username, $password)
@@ -38,10 +37,8 @@ class LdapRecord extends Authentication implements IAuthentication
         $this->password = $password;
 
         try {
-            $connection = Container::getConnection();
-            Log::Debug("LdapRecord plugin: Connecting to LDAP server.");
+            $connection = Container::getConnection('default');
             $connection->connect();
-            Log::Debug("LdapRecord plugin: Connection successful.");
 
             $userPrincipalName = $username . $this->options->getAccountSuffix();
             Log::Debug("LdapRecord plugin: Attempting to authenticate with UPN '$userPrincipalName'.");
@@ -49,17 +46,13 @@ class LdapRecord extends Authentication implements IAuthentication
             if ($connection->auth()->attempt($userPrincipalName, $password)) {
                 Log::Debug("LdapRecord plugin: User '$username' successfully authenticated against LDAP.");
                 return true;
-            } else {
-                Log::Debug("LdapRecord plugin: Authentication failed for user '$username'.");
             }
-        } catch (\LdapRecord\Auth\BindException $e) {
-            Log::Error("LdapRecord plugin: Bind exception during authentication for user '$username'. Message: " . $e->getMessage());
         } catch (\Exception $e) {
-            Log::Error("LdapRecord plugin: An unexpected error occurred during authentication for user '$username'. Message: " . $e->getMessage());
+            Log::Error("LdapRecord plugin: Authentication failed for user '$username'. Message: " . $e->getMessage());
         }
 
         if ($this->options->retryAgainstDatabase()) {
-            Log::Debug("LdapRecord plugin: LDAP authentication failed. Falling back to database authentication for user '$username'.");
+            Log::Debug("LdapRecord plugin: LDAP authentication failed. Falling back to database authentication for '$username'.");
             return $this->authToDecorate->Validate($username, $password);
         }
 
@@ -68,7 +61,6 @@ class LdapRecord extends Authentication implements IAuthentication
 
     public function Login($username, $loginContext)
     {
-        Log::Debug("LdapRecord plugin: Synchronizing user '$username'.");
         $this->Synchronize($username);
 
         $userRepo = new UserRepository();
@@ -85,50 +77,40 @@ class LdapRecord extends Authentication implements IAuthentication
     private function Synchronize($username)
     {
         try {
-            Log::Debug("LdapRecord plugin: Searching for user '$username' in Active Directory.");
-            $ldapUser = LdapUser::where('samaccountname', '=', $username)->first();
+            $ldapUser = LdapUserModel::where('samaccountname', '=', $username)->first();
 
             if (!$ldapUser) {
-                Log::Error("LdapRecord plugin: Could not find user '$username' in Active Directory after successful authentication.");
+                Log::Error("LdapRecord: Could not find user '$username' for synchronization.");
                 return;
             }
-
-            Log::Debug("LdapRecord plugin: Found user. Synchronizing attributes.");
             
-            $groups = [];
-            if ($this->options->syncGroups()) {
-                Log::Debug("LdapRecord plugin: Group sync is enabled. Fetching groups for user '$username'.");
-                $ldapGroups = $ldapUser->groups()->get();
-                Log::Debug("LdapRecord plugin: Found " . count($ldapGroups) . " groups in AD.");
-                foreach($ldapGroups as $ldapGroup) {
-                    $groupName = $ldapGroup->getFirstAttribute('cn');
-                    $groups[] = $groupName;
-                    Log::Debug("LdapRecord plugin: Syncing group '$groupName'.");
-                }
-            }
+            Log::Debug("LdapRecord plugin: Creating LdapRecordUser object for user '$username'.");
+            $user = new LdapRecordUser($ldapUser, $this->options);
 
             $registration = new Registration();
             $registration->Synchronize(
                 new AuthenticatedUser(
                     $username,
-                    $ldapUser->getFirstAttribute('mail'),
-                    $ldapUser->getFirstAttribute('givenname'),
-                    $ldapUser->getFirstAttribute('sn'),
+                    $user->GetEmail(),
+                    $user->GetFirstName(),
+                    $user->GetLastName(),
                     $this->password,
                     Configuration::Instance()->GetKey(ConfigKeys::DEFAULT_LANGUAGE),
                     Configuration::Instance()->GetDefaultTimezone(),
-                    $ldapUser->getFirstAttribute('telephonenumber'),
-                    $ldapUser->getFirstAttribute('company'),
-                    $ldapUser->getFirstAttribute('title'),
-                    $groups
-                )
+                    $user->GetPhone(),
+                    $user->GetInstitution(),
+                    $user->GetTitle(),
+                    $user->GetGroups()
+                ),
+                true 
             );
-             Log::Debug("LdapRecord plugin: Synchronization complete for user '$username'.");
+
+            Log::Debug("LdapRecord plugin: Synchronization complete for user '$username'.");
 
         } catch (\Exception $e) {
-            Log::Error("LdapRecord plugin: An error occurred during user synchronization for '$username'. Message: " . $e->getMessage());
+            Log::Error("LdapRecord plugin: An error occurred during synchronization for '$username'. Message: " . $e->getMessage());
         }
     }
     
-    // ... all other methods remain the same
+    // ... other methods are unchanged
 }
