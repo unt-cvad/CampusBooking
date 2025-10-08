@@ -1,3 +1,25 @@
+# CUSTOM CVAD NOTES
+```
+dnf install git unzip curl -y
+dnf install php php-mysqlnd php-pdo php-mbstring php-xml php-json php-common php-cli php-gd php-ldap -y
+dnf install mariadb-server mariadb -y // install and configure it
+mkdir tpl_c
+chown -R www-data:www-data tpl_c // if gonna be on a web server
+chown -R $(whoami):$(whoami) tpl_c // if gonna be on a dev server
+```
+Run composer to install the necessary packages.  You'll have to run this from the root directory of the LibreBooking project.
+```
+composer install
+```
+Pay attention to any warnings or missing dependencies that you need to install.
+
+You can run PHP at runtime using the following command. Again, you'll have to e at the root directory of the LibreBooking project.
+```
+php -S 0.0.0.0:8080 -t Web
+```
+
+`/root/LibreBooking/lib/Config/ConfigKeys.php` is where you could add the plugin name so it shows up on the Web UI and can be selected
+
 
 # Librebooking
 
