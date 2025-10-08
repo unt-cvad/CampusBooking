@@ -1,19 +1,24 @@
 <?php
 
+require_once(ROOT_DIR . '/lib/Config/namespace.php');
+
 class LdapRecordOptions
 {
-    private $config = [];
+    private $_options = [];
 
     public function __construct()
     {
-        // Directly load the user-provided config file.
-        $configPath = ROOT_DIR . '/plugins/Authentication/LdapRecord/LdapRecord.config.php';
-        if (file_exists($configPath)) {
-            // The config file returns an array. We need the nested part.
-            $configFile = require($configPath);
-            $this->config = $configFile['settings']['LdapRecord'] ?? [];
-        }
+        require_once(dirname(__FILE__) . '/LdapRecord.config.php');
+
+        Configuration::Instance()->Register(
+            dirname(__FILE__) . '/LdapRecord.config.php',
+            '',
+            LdapRecordConfigKeys::CONFIG_ID,
+            false,
+            LdapRecordConfigKeys::class
+        );
     }
+
 
     public function getHosts()
     {
