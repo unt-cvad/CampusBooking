@@ -1539,6 +1539,7 @@ class ConfigKeys
             'Drupal' => 'Drupal',
             'Krb5' => 'Krb5',
             'Ldap' => 'Ldap',
+            'LdapRecord' => 'LdapRecord',
             'Mellon' => 'Mellon',
             'Moodle' => 'Moodle',
             'MoodleAdv' => 'MoodleAdv',
