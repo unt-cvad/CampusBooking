@@ -1,43 +1,38 @@
 <?php
 
-require_once(ROOT_DIR . '/lib/Config/namespace.php');
-
 class LdapRecordOptions
 {
-    private $_options = [];
+    private $config = [];
 
     public function __construct()
     {
-        require_once(dirname(__FILE__) . '/LdapRecord.config.php');
-
-        Configuration::Instance()->Register(
-            dirname(__FILE__) . '/LdapRecord.config.php',
-            '',
-            LdapRecordConfigKeys::CONFIG_ID,
-            false,
-            LdapRecordConfigKeys::class
-        );
+        Log::Debug('LdapRecordOptions constructed.');
+        $configPath = ROOT_DIR . '/plugins/Authentication/LdapRecord/LdapRecord.config.php';
+        if (file_exists($configPath)) {
+            $configFile = require($configPath);
+            $this->config = $configFile['settings'] ?? [];
+        }
     }
-
 
     public function getHosts()
     {
-        return $this->config['hosts'] ?? [];
+        $controllers = $this->config['domain.controllers'] ?? '';
+        return !empty($controllers) ? explode(',', $controllers) : [];
     }
 
     public function getBaseDn()
     {
-        return $this->config['base_dn'] ?? '';
+        return $this->config['basedn'] ?? '';
     }
 
     public function getAdminUsername()
     {
-        return $this->config['admin_username'] ?? null;
+        return $this->config['username'] ?? null;
     }
 
     public function getAdminPassword()
     {
-        return $this->config['admin_password'] ?? null;
+        return $this->config['password'] ?? null;
     }
     
     public function getPort()
@@ -47,16 +42,26 @@ class LdapRecordOptions
 
     public function isSsl()
     {
-        return $this->config['use_ssl'] ?? false;
+        return ($this->config['use.ssl'] ?? false) === true || ($this->config['use.ssl'] ?? 'false') === 'true';
     }
 
     public function isTls()
     {
-        return $this->config['use_tls'] ?? false;
+        return ($this->config['use.tls'] ?? false) === true || ($this->config['use.tls'] ?? 'false') === 'true';
     }
 
     public function retryAgainstDatabase()
     {
-        return $this->config['database_fallback'] ?? false;
+        return ($this->config['database.auth.when.ldap.user.not.found'] ?? false) === true || ($this->config['database.auth.when.ldap.user.not.found'] ?? 'false') === 'true';
+    }
+
+    public function getAccountSuffix()
+    {
+        return $this->config['account.suffix'] ?? '';
+    }
+    
+    public function syncGroups()
+    {
+        return ($this->config['sync.groups'] ?? false) === true || ($this->config['sync.groups'] ?? 'false') === 'true';
     }
 }
