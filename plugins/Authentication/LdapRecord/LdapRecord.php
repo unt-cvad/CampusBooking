@@ -112,5 +112,41 @@ class LdapRecord extends Authentication implements IAuthentication
         }
     }
     
+
+    public function AllowUsernameChange()
+    {
+        return false;
+    }
+
+    public function AllowEmailAddressChange()
+    {
+        return false;
+    }
+
+    public function AllowPasswordChange()
+    {
+        return false;
+    }
+
+    public function AllowNameChange()
+    {
+        return false;
+    }
+
+    public function AllowPhoneChange()
+    {
+        return false;
+    }
+
+    public function AllowOrganizationChange()
+    {
+        return false;
+    }
+
+    public function AllowPositionChange()
+    {
+        return false;
+    }
+    
     // ... other methods are unchanged
 }
