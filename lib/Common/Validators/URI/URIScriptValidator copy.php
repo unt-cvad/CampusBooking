@@ -49,9 +49,8 @@ class URIScriptValidator implements IURIScriptValidator
 
     private static function isSafePath(string $path): bool
     {
-        // Allow root-level .php files OR files in /Web/
-        if (!preg_match('#^/[^/]+\\.php$#', $path) && !preg_match('#/Web/[^/]+\\.php$#', $path)) {
-            // If it matches NEITHER, it's unsafe.
+        // Enforce the path must include /Web/ and end with a PHP file
+        if (!preg_match('#/Web/[^/]+\.php$#', $path)) {
             return false;
         }
 
@@ -68,11 +67,11 @@ class URIScriptValidator implements IURIScriptValidator
 
         // Common XSS vectors to look for
         $xssPatterns = [
-            '/<script.*?>.*?<\\/script>/is',
-            '/on\w+=\".*?\"/i',
+            '/<script.*?>.*?<\/script>/is',
+            '/on\w+=".*?"/i',
             '/javascript:/i',
-            '/data:text\\/html/i',
-            '/src\s*=\s*[\'"]?javascript:/i'
+            '/data:text\/html/i',
+            '/<.*?>/i',
         ];
 
         foreach ($xssPatterns as $pattern) {
